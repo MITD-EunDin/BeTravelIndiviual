@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/travelAlone
+    url: jdbc:postgresql://localhost:5432/travelalone
     username: postgres
     password: 110404
     driver-class-name: org.postgresql.Driver
@@ -8,6 +8,7 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
+    show-sql: true
   servlet:
     multipart:
       max-file-size: 10MB
@@ -15,6 +16,6 @@ spring:
   thymeleaf:
     enabled: false
 #khóa bí mật bsse64 dùng của security trong spring boot
-security:
-  jwt:
-    signer-key: "MHNtdHFqem1nZmMyNmgzdDN5MXhxM2hpZXQ2YmxvYnVqYXpxYjIyNTRlaWNvMWRzMnFpZXd2dWNidmJvOGtyN2w0ZnhjdWV1eDBweDB5MW54dHJxMnFhczUwbG5qMGdqNTdzMHFzamppczU3NHBjZ3l4NmlnOWNiYWJqaXgwMGE="
+  security:
+    jwt:
+      signer-key: "MHNtdHFqem1nZmMyNmgzdDN5MXhxM2hpZXQ2YmxvYnVqYXpxYjIyNTRlaWNvMWRzMnFpZXd2dWNidmJvOGtyN2w0ZnhjdWV1eDBweDB5MW54dHJxMnFhczUwbG5qMGdqNTdzMHFzamppczU3NHBjZ3l4NmlnOWNiYWJqaXgwMGE="
