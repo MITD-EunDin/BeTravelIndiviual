@@ -20,7 +20,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.util.List;
@@ -28,13 +27,13 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-public class SecurityConfig implements WebMvcConfigurer {
+public class SecurityConfig {
 
     @Value("${spring.security.jwt.signer-key}")
     private String SIGNER_KEY;
 
-    private final String[] PUBLIC_ENDPOINT = {
-            "/users/customers", "/auth/token"
+    private final String[] PUBLIC_ENDPOINTS = {
+            "/users/customers", "/auth/token", "/auth/introspect"
     };
 
     @Bean
@@ -42,13 +41,15 @@ public class SecurityConfig implements WebMvcConfigurer {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-
                 .authorizeHttpRequests(request ->
-                        request.requestMatchers(PUBLIC_ENDPOINT).permitAll()
+                        request
+                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                                .requestMatchers("/users/my-info").authenticated()
+                                .requestMatchers("/users/**").hasAnyRole("ADMIN", "STAFF")
                                 .anyRequest().authenticated())
-
                 .oauth2ResourceServer(oauth ->
-                        oauth.jwt(jwtConfigurer ->
+                        oauth
+                                .jwt(jwtConfigurer ->
                                         jwtConfigurer.decoder(jwtDecoder())
                                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                                 .authenticationEntryPoint(jwtAuthenticationEntryPoint()))
@@ -57,7 +58,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .exceptionHandling(exception ->
                         exception.accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.getWriter().write("❌ Access Denied: " + accessDeniedException.getMessage());
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"code\": 1008, \"message\": \"Access Denied: " + accessDeniedException.getMessage() + "\"}");
                         }));
 
         return http.build();
@@ -77,20 +79,17 @@ public class SecurityConfig implements WebMvcConfigurer {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        try {
-            SecretKeySpec secretKeySpec = new SecretKeySpec(SIGNER_KEY.getBytes(), "HS512");
-            return NimbusJwtDecoder.withSecretKey(secretKeySpec)
-                    .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS512)
-                    .build();
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to create JwtDecoder due to invalid signer key", e);
-        }
+        SecretKeySpec secretKeySpec = new SecretKeySpec(SIGNER_KEY.getBytes(), "HS512");
+        return NimbusJwtDecoder.withSecretKey(secretKeySpec)
+                .macAlgorithm(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS512)
+                .build();
     }
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+        grantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
         return converter;
